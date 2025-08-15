@@ -1,0 +1,346 @@
+{
+  "name": "SAK Komisyon Süreci",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "commission-webhook",
+      "name": "Commission Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "commission-webhook",
+      "settings": {
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "path": "commission-webhook"
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "request_id",
+              "value": "={{ $json.request_id }}"
+            },
+            {
+              "name": "commission_type",
+              "value": "={{ $json.commission_type }}"
+            },
+            {
+              "name": "meeting_date",
+              "value": "={{ $json.meeting_date }}"
+            },
+            {
+              "name": "meeting_time",
+              "value": "={{ $json.meeting_time }}"
+            },
+            {
+              "name": "meeting_location",
+              "value": "={{ $json.meeting_location }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "estimated_amount",
+              "value": "={{ $json.estimated_amount }}"
+            },
+            {
+              "name": "members",
+              "value": "={{ JSON.stringify($json.members) }}"
+            }
+          ]
+        }
+      },
+      "id": "extract-commission-data",
+      "name": "Extract Commission Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "expression": "={{ JSON.parse($json.members) }}"
+      },
+      "id": "parse-members",
+      "name": "Parse Commission Members",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-members",
+      "name": "Split Members",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "satinalma@kutahyam.tr",
+        "toEmail": "={{ $json.email }}",
+        "subject": "{{ $('Extract Commission Data').item.json.commission_type }} Komisyon Toplantısı Daveti",
+        "text": "Sayın {{ $json.name }},\n\n{{ $('Extract Commission Data').item.json.commission_type }} komisyon toplantısına davetlisiniz.\n\nToplantı Detayları:\n📅 Tarih: {{ $('Extract Commission Data').item.json.meeting_date }}\n🕐 Saat: {{ $('Extract Commission Data').item.json.meeting_time }}\n📍 Yer: {{ $('Extract Commission Data').item.json.meeting_location }}\n\nGündem:\n{{ $('Extract Commission Data').item.json.title }}\nTahmini Tutar: {{ $('Extract Commission Data').item.json.estimated_amount }} TL\n\nToplantıya katılım durumunuzu bildirmenizi rica ederiz.\n\nOnay Linki: https://satinalma.kutahyam.tr/commission/confirm.php?token={{ $json.token }}&response=accept\nRed Linki: https://satinalma.kutahyam.tr/commission/confirm.php?token={{ $json.token }}&response=decline\n\nSaygılarımızla,\nKütahya Belediyesi Satın Alma Birimi",
+        "attachments": "={{ $json.attachments ? JSON.stringify($json.attachments) : '[]' }}"
+      },
+      "id": "send-commission-email",
+      "name": "Send Commission Invitation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat_id }}",
+        "text": "📋 *{{ $('Extract Commission Data').item.json.commission_type }} Komisyon Toplantısı*\n\n👤 *Sayın* {{ $json.name }}\n\n📅 *Tarih:* {{ $('Extract Commission Data').item.json.meeting_date }}\n🕐 *Saat:* {{ $('Extract Commission Data').item.json.meeting_time }}\n📍 *Yer:* {{ $('Extract Commission Data').item.json.meeting_location }}\n\n📄 *Gündem:* {{ $('Extract Commission Data').item.json.title }}\n💰 *Tutar:* {{ $('Extract Commission Data').item.json.estimated_amount }} TL\n\n[Kabul Et](https://satinalma.kutahyam.tr/commission/confirm.php?token={{ $json.token }}&response=accept) | [Reddet](https://satinalma.kutahyam.tr/commission/confirm.php?token={{ $json.token }}&response=decline)",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "send-commission-telegram",
+      "name": "Send Commission Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {},
+      "id": "meeting-reminder-webhook",
+      "name": "Meeting Reminder Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500],
+      "webhookId": "meeting-reminder",
+      "settings": {
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "path": "meeting-reminder"
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat_id }}",
+        "text": "⏰ *Toplantı Hatırlatması*\n\n{{ $json.commission_type }} komisyon toplantısı {{ $json.remaining_hours }} saat sonra başlayacaktır.\n\n📅 *Tarih:* {{ $json.meeting_date }}\n🕐 *Saat:* {{ $json.meeting_time }}\n📍 *Yer:* {{ $json.meeting_location }}\n\n📄 *Gündem:* {{ $json.title }}",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "meeting-reminder-telegram",
+      "name": "Meeting Reminder Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {},
+      "id": "decision-webhook",
+      "name": "Commission Decision Webhook", 
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 700],
+      "webhookId": "commission-decision",
+      "settings": {
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "path": "commission-decision"
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.decision }}",
+              "operation": "equal",
+              "value2": "approved"
+            }
+          ]
+        }
+      },
+      "id": "check-decision",
+      "name": "Check Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 700]
+    },
+    {
+      "parameters": {
+        "fromEmail": "satinalma@kutahyam.tr",
+        "toEmail": "={{ $json.requester_email }}",
+        "subject": "✅ Komisyon Kararı: ONAYLANDI - {{ $json.title }}",
+        "text": "Sayın {{ $json.requester_name }},\n\n{{ $json.request_number }} numaralı talebiniz {{ $json.commission_type }} komisyonu tarafından ONAYLANMIŞTIR.\n\nKommisyon Tarihi: {{ $json.meeting_date }}\nKarar: {{ $json.decision_details }}\n\nTalebiniz bir sonraki aşamaya geçmiştir.\n\nSaygılarımızla,\nKütahya Belediyesi Satın Alma Birimi"
+      },
+      "id": "approved-email",
+      "name": "Send Approval Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [680, 600]
+    },
+    {
+      "parameters": {
+        "fromEmail": "satinalma@kutahyam.tr",
+        "toEmail": "={{ $json.requester_email }}",
+        "subject": "❌ Komisyon Kararı: REDDEDİLDİ - {{ $json.title }}",
+        "text": "Sayın {{ $json.requester_name }},\n\n{{ $json.request_number }} numaralı talebiniz {{ $json.commission_type }} komisyonu tarafından REDDEDİLMİŞTİR.\n\nKommisyon Tarihi: {{ $json.meeting_date }}\nRed Gerekçesi: {{ $json.rejection_reason }}\n\nTalebinizle ilgili sorularınız için satın alma birimi ile iletişime geçebilirsiniz.\n\nSaygılarımızla,\nKütahya Belediyesi Satın Alma Birimi"
+      },
+      "id": "rejected-email",
+      "name": "Send Rejection Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [680, 800]
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "✅ *Komisyon Kararı: ONAYLANDI*\n\n📋 *Talep:* {{ $json.title }}\n📊 *Komisyon:* {{ $json.commission_type }}\n👤 *Talep Eden:* {{ $json.requester_name }}\n📅 *Karar Tarihi:* {{ $json.meeting_date }}\n\n[Talep Detayı](https://satinalma.kutahyam.tr/admin/request.php?id={{ $json.request_id }})",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "approved-telegram",
+      "name": "Approval Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "❌ *Komisyon Kararı: REDDEDİLDİ*\n\n📋 *Talep:* {{ $json.title }}\n📊 *Komisyon:* {{ $json.commission_type }}\n👤 *Talep Eden:* {{ $json.requester_name }}\n📅 *Karar Tarihi:* {{ $json.meeting_date }}\n💬 *Gerekçe:* {{ $json.rejection_reason }}\n\n[Talep Detayı](https://satinalma.kutahyam.tr/admin/request.php?id={{ $json.request_id }})",
+        "additionalProperties": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "rejected-telegram",
+      "name": "Rejection Telegram Notification", 
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 800]
+    }
+  ],
+  "connections": {
+    "Commission Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Commission Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Commission Data": {
+      "main": [
+        [
+          {
+            "node": "Parse Commission Members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Commission Members": {
+      "main": [
+        [
+          {
+            "node": "Split Members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Members": {
+      "main": [
+        [
+          {
+            "node": "Send Commission Invitation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Commission Invitation": {
+      "main": [
+        [
+          {
+            "node": "Send Commission Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meeting Reminder Webhook": {
+      "main": [
+        [
+          {
+            "node": "Meeting Reminder Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Commission Decision Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Decision": {
+      "main": [
+        [
+          {
+            "node": "Send Approval Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Rejection Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Approval Email": {
+      "main": [
+        [
+          {
+            "node": "Approval Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Rejection Email": {
+      "main": [
+        [
+          {
+            "node": "Rejection Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

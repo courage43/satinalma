@@ -1,0 +1,261 @@
+{
+  "name": "RFQ Teklif Toplama Süreci",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "rfq-webhook",
+      "name": "RFQ Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "rfq-webhook",
+      "settings": {
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "path": "rfq-webhook"
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "request_id",
+              "value": "={{ $json.request_id }}"
+            },
+            {
+              "name": "rfq_number",
+              "value": "={{ $json.rfq_number }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "description",
+              "value": "={{ $json.description }}"
+            },
+            {
+              "name": "deadline",
+              "value": "={{ $json.deadline }}"
+            },
+            {
+              "name": "suppliers",
+              "value": "={{ JSON.stringify($json.suppliers) }}"
+            }
+          ]
+        }
+      },
+      "id": "extract-rfq-data",
+      "name": "Extract RFQ Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "expression": "={{ JSON.parse($json.suppliers) }}"
+      },
+      "id": "parse-suppliers",
+      "name": "Parse Suppliers",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-suppliers",
+      "name": "Split Suppliers",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "satinalma@kutahyam.tr",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Teklif Talebi - {{ $('Extract RFQ Data').item.json.rfq_number }}",
+        "text": "Sayın {{ $json.company_name }},\n\nAşağıdaki talep için teklifinizi bekliyoruz:\n\nTeklif No: {{ $('Extract RFQ Data').item.json.rfq_number }}\nKonu: {{ $('Extract RFQ Data').item.json.title }}\nAçıklama: {{ $('Extract RFQ Data').item.json.description }}\n\nTeklif Verme Linki: https://satinalma.kutahyam.tr/supplier/quotation.php?rfq={{ $('Extract RFQ Data').item.json.request_id }}&token={{ $json.token }}\n\nSon Teklif Tarihi: {{ $('Extract RFQ Data').item.json.deadline }}\n\nTekliflerinizi belirtilen tarihten önce sisteme girmenizi rica ederiz.\n\nSaygılarımızla,\nKütahya Belediyesi Satın Alma Birimi",
+        "attachments": "={{ $json.attachments ? JSON.stringify($json.attachments) : '[]' }}"
+      },
+      "id": "send-rfq-email",
+      "name": "Send RFQ Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "minutes"
+      },
+      "id": "wait-30min",
+      "name": "Wait 30 Minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "📧 *RFQ Gönderildi*\n\n📋 *Teklif No:* {{ $('Extract RFQ Data').item.json.rfq_number }}\n🏢 *Firma:* {{ $json.company_name }}\n📧 *E-posta:* {{ $json.email }}\n⏰ *Son Tarih:* {{ $('Extract RFQ Data').item.json.deadline }}\n\n✅ Teklif talebi başarıyla gönderildi.",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "rfq-telegram-notification",
+      "name": "RFQ Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {},
+      "id": "deadline-reminder-webhook",
+      "name": "Deadline Reminder Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500],
+      "webhookId": "deadline-reminder",
+      "settings": {
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "path": "deadline-reminder"
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "satinalma@kutahyam.tr",
+        "toEmail": "={{ $json.supplier_email }}",
+        "subject": "⚠️ Teklif Verme Süreniz Bitiyor - {{ $json.rfq_number }}",
+        "text": "Sayın {{ $json.company_name }},\n\n{{ $json.rfq_number }} numaralı teklif talebiniz için süreniz yaklaşık 2 saat içinde sona erecektir.\n\nHenüz teklif vermediyseniz, lütfen aşağıdaki linkten teklifinizi girin:\n\nTeklif Verme Linki: https://satinalma.kutahyam.tr/supplier/quotation.php?rfq={{ $json.request_id }}&token={{ $json.token }}\n\nSon Tarih: {{ $json.deadline }}\n\nSaygılarımızla,\nKütahya Belediyesi Satın Alma Birimi"
+      },
+      "id": "deadline-reminder-email",
+      "name": "Deadline Reminder Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {},
+      "id": "quotation-received-webhook",
+      "name": "Quotation Received Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 700],
+      "webhookId": "quotation-received",
+      "settings": {
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "path": "quotation-received"
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "📝 *Yeni Teklif Alındı*\n\n📋 *RFQ:* {{ $json.rfq_number }}\n🏢 *Firma:* {{ $json.company_name }}\n💰 *Tutar:* {{ $json.total_amount }} TL\n⏰ *Tarih:* {{ $json.received_at }}\n\n[Teklifleri Görüntüle](https://satinalma.kutahyam.tr/admin/quotations.php?rfq={{ $json.request_id }})",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "quotation-telegram",
+      "name": "Quotation Received Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [460, 700]
+    }
+  ],
+  "connections": {
+    "RFQ Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract RFQ Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract RFQ Data": {
+      "main": [
+        [
+          {
+            "node": "Parse Suppliers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Suppliers": {
+      "main": [
+        [
+          {
+            "node": "Split Suppliers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Suppliers": {
+      "main": [
+        [
+          {
+            "node": "Send RFQ Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send RFQ Email": {
+      "main": [
+        [
+          {
+            "node": "Wait 30 Minutes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30 Minutes": {
+      "main": [
+        [
+          {
+            "node": "RFQ Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deadline Reminder Webhook": {
+      "main": [
+        [
+          {
+            "node": "Deadline Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation Received Webhook": {
+      "main": [
+        [
+          {
+            "node": "Quotation Received Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

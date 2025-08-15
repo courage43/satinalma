@@ -1,0 +1,264 @@
+{
+  "name": "Satın Alma Onay Süreci",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "approval-webhook",
+      "settings": {
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "path": "approval-webhook"
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "request_id",
+              "value": "={{ $json.request_id }}"
+            },
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "requester_name",
+              "value": "={{ $json.requester_name }}"
+            },
+            {
+              "name": "department",
+              "value": "={{ $json.department }}"
+            },
+            {
+              "name": "estimated_amount",
+              "value": "={{ $json.estimated_amount }}"
+            },
+            {
+              "name": "urgency_level",
+              "value": "={{ $json.urgency_level }}"
+            },
+            {
+              "name": "approval_url",
+              "value": "={{ $json.approval_url }}"
+            },
+            {
+              "name": "rejection_url",
+              "value": "={{ $json.rejection_url }}"
+            }
+          ]
+        }
+      },
+      "id": "extract-data",
+      "name": "Extract Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.urgency_level }}",
+              "operation": "equal",
+              "value2": "acil"
+            }
+          ]
+        }
+      },
+      "id": "check-urgency",
+      "name": "Check Urgency",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@kutahyam.tr",
+        "toEmail": "sas@kutahyam.tr",
+        "subject": "🔴 ACİL SATIN ALMA TALEP - {{ $json.title }}",
+        "text": "ACİL SATIN ALMA TALEBİ!\n\nTalep No: ST-{{ $json.request_id }}\nTalep Eden: {{ $json.requester_name }}\nDepartman: {{ $json.department }}\nTahmini Tutar: {{ $json.estimated_amount }} TL\nAciliyet: {{ $json.urgency_level }}\n\nTalep Başlığı: {{ $json.title }}\n\n⚡ Bu talep ACİL olarak işaretlenmiştir!\n\n✅ ONAYLA: {{ $json.approval_url }}\n❌ REDDET: {{ $json.rejection_url }}\n\nBu e-posta otomatik olarak gönderilmiştir."
+      },
+      "id": "urgent-email",
+      "name": "Urgent Email to SAS",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@kutahyam.tr",
+        "toEmail": "sas@kutahyam.tr",
+        "subject": "Yeni Satın Alma Talebi - {{ $json.title }}",
+        "text": "Yeni satın alma talebi oluşturuldu.\n\nTalep No: ST-{{ $json.request_id }}\nTalep Eden: {{ $json.requester_name }}\nDepartman: {{ $json.department }}\nTahmini Tutar: {{ $json.estimated_amount }} TL\nAciliyet: {{ $json.urgency_level }}\n\nTalep Başlığı: {{ $json.title }}\n\n✅ ONAYLA: {{ $json.approval_url }}\n❌ REDDET: {{ $json.rejection_url }}\n\nBu e-posta otomatik olarak gönderilmiştir."
+      },
+      "id": "normal-email",
+      "name": "Normal Email to SAS", 
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "🔴 *ACİL SATIN ALMA TALEBİ*\n\n📋 *Talep:* {{ $json.title }}\n👤 *Talep Eden:* {{ $json.requester_name }}\n🏢 *Departman:* {{ $json.department }}\n💰 *Tutar:* {{ $json.estimated_amount }} TL\n⚡ *Aciliyet:* {{ $json.urgency_level }}\n\n[Onayla]({{ $json.approval_url }}) | [Reddet]({{ $json.rejection_url }})",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "urgent-telegram",
+      "name": "Urgent Telegram to SAS",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "chatId": "-1001234567890",
+        "text": "📋 *Yeni Satın Alma Talebi*\n\n📝 *Talep:* {{ $json.title }}\n👤 *Talep Eden:* {{ $json.requester_name }}\n🏢 *Departman:* {{ $json.department }}\n💰 *Tutar:* {{ $json.estimated_amount }} TL\n📊 *Aciliyet:* {{ $json.urgency_level }}\n\n[Onayla]({{ $json.approval_url }}) | [Reddet]({{ $json.rejection_url }})",
+        "additionalFields": {
+          "parseMode": "Markdown"
+        }
+      },
+      "id": "normal-telegram",
+      "name": "Normal Telegram to SAS",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ parseFloat($json.estimated_amount) }}",
+              "operation": "largerEqual",
+              "value2": 3000
+            }
+          ]
+        }
+      },
+      "id": "check-amount",
+      "name": "Check Amount for SAK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@kutahyam.tr", 
+        "toEmail": "sak@kutahyam.tr",
+        "subject": "SAK Komisyon Kararı Gerekli - {{ $json.title }}",
+        "text": "3000 TL üzeri talep için SAK komisyon kararı gereklidir.\n\nTalep No: ST-{{ $json.request_id }}\nTalep Eden: {{ $json.requester_name }}\nDepartman: {{ $json.department }}\nTahmini Tutar: {{ $json.estimated_amount }} TL\n\nTalep Başlığı: {{ $json.title }}\n\n✅ ONAYLA: {{ $json.approval_url }}\n❌ REDDET: {{ $json.rejection_url }}\n\nBu e-posta otomatik olarak gönderilmiştir."
+      },
+      "id": "sak-email",
+      "name": "SAK Commission Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1560, 200]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [
+          {
+            "node": "Check Urgency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Urgency": {
+      "main": [
+        [
+          {
+            "node": "Urgent Email to SAS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normal Email to SAS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgent Email to SAS": {
+      "main": [
+        [
+          {
+            "node": "Urgent Telegram to SAS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normal Email to SAS": {
+      "main": [
+        [
+          {
+            "node": "Normal Telegram to SAS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgent Telegram to SAS": {
+      "main": [
+        [
+          {
+            "node": "Check Amount for SAK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normal Telegram to SAS": {
+      "main": [
+        [
+          {
+            "node": "Check Amount for SAK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Amount for SAK": {
+      "main": [
+        [
+          {
+            "node": "SAK Commission Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
