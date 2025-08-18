@@ -24,11 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $request_number = FormatHelper::generateReference('ST', date('Y'));
         
         // Calculate total estimated amount
-        $estimated_amount = 0;
+        $estimated_amount = 0.00;
         if (!empty($_POST['items'])) {
             foreach ($_POST['items'] as $item) {
-                if (!empty($item['name']) && !empty($item['quantity']) && !empty($item['unit_price'])) {
-                    $estimated_amount += $item['quantity'] * $item['unit_price'];
+                if (!empty($item['name']) && isset($item['quantity']) && isset($item['unit_price'])) {
+                    $quantity = floatval($item['quantity'] ?: 0);
+                    $unit_price = floatval($item['unit_price'] ?: 0);
+                    $estimated_amount += $quantity * $unit_price;
                 }
             }
         }
@@ -37,15 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $requestData = [
             'request_number' => $request_number,
             'requester_id' => $auth->getCurrentUserId(),
-            'title' => $_POST['title'],
-            'description' => $_POST['description'],
-            'justification' => $_POST['justification'],
-            'category_id' => $_POST['category_id'],
-            'urgency_level' => $_POST['urgency_level'],
-            'estimated_amount' => $estimated_amount,
-            'requested_delivery_date' => $_POST['requested_delivery_date'] ?: null,
-            'status' => 'sas_incelemede',
-            'created_at' => DateHelper::now()
+            'title' => trim($_POST['title'] ?? ''),
+            'description' => trim($_POST['description'] ?? ''),
+            'justification' => trim($_POST['justification'] ?? ''),
+            'category_id' => !empty($_POST['category_id']) ? intval($_POST['category_id']) : null,
+            'urgency_level' => $_POST['urgency_level'] ?? 'orta',
+            'estimated_amount' => round($estimated_amount, 2),
+            'requested_delivery_date' => !empty($_POST['requested_delivery_date']) ? $_POST['requested_delivery_date'] : null,
+            'status' => 'sas_incelemede'
         ];
         
         $request_id = $db->insert('purchase_requests', $requestData);
@@ -54,17 +55,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_POST['items'])) {
             foreach ($_POST['items'] as $item) {
                 if (!empty($item['name'])) {
-                    $total_price = ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0);
+                    $quantity = floatval($item['quantity'] ?: 1);
+                    $unit_price = floatval($item['unit_price'] ?: 0);
+                    $total_price = round($quantity * $unit_price, 2);
+                    
                     $itemData = [
                         'request_id' => $request_id,
-                        'item_name' => $item['name'],
-                        'description' => $item['description'] ?? null,
-                        'quantity' => $item['quantity'] ?? 1,
-                        'unit' => $item['unit'] ?? 'Adet',
-                        'estimated_unit_price' => $item['unit_price'] ?? 0,
+                        'item_name' => trim($item['name']),
+                        'description' => trim($item['description'] ?? ''),
+                        'quantity' => $quantity,
+                        'unit' => trim($item['unit'] ?? 'Adet'),
+                        'estimated_unit_price' => $unit_price,
                         'estimated_total_price' => $total_price,
-                        'specifications' => $item['specifications'] ?? null,
-                        'brand_preference' => $item['brand_preference'] ?? null
+                        'specifications' => trim($item['specifications'] ?? ''),
+                        'brand_preference' => trim($item['brand_preference'] ?? '')
                     ];
                     
                     $db->insert('request_items', $itemData);

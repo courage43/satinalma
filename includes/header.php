@@ -142,13 +142,31 @@ if (in_array($currentFile, $modernFiles)) {
                         <li class="nav-item">
                             <a class="nav-link" href="admin/users.php">
                                 <i class="fas fa-users me-2"></i>
-                                Kullanıcı Yönetimi
+                                Kullanıcılar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin/categories.php">
+                                <i class="fas fa-tags me-2"></i>
+                                Kategoriler
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="admin/settings.php">
                                 <i class="fas fa-cog me-2"></i>
                                 Sistem Ayarları
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin/reports.php">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Raporlar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin/n8n_setup.php">
+                                <i class="fas fa-robot me-2"></i>
+                                N8N Kurulumu
                             </a>
                         </li>
                         <?php endif; ?>
