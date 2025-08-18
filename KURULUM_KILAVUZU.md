@@ -415,8 +415,8 @@ rm -rf /tmp/cache/*
 - **Dokümantasyon:** https://docs.satinalma.kutahyam.tr
 
 ### Sistem Bilgileri
-- **Versiyon:** 2.0
-- **Son Güncelleme:** 2025
+- **Versiyon:** 2.1
+- **Son Güncelleme:** Ağustos 2025
 - **PHP Versiyon:** 8.1+
 - **Lisans:** MIT
 

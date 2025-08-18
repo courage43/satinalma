@@ -1,10 +1,20 @@
 <?php
+require_once 'env.php';
+
 class Database {
-    private $host = 'localhost';
-    private $db_name = 'satin_alma_sistem';
-    private $username = 'root';
-    private $password = '';
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     private $conn;
+    
+    public function __construct() {
+        EnvConfig::load();
+        $this->host = $_ENV['DB_HOST'] ?? 'localhost';
+        $this->db_name = $_ENV['DB_NAME'] ?? 'satin_alma_sistem';
+        $this->username = $_ENV['DB_USER'] ?? 'root';
+        $this->password = $_ENV['DB_PASS'] ?? '';
+    }
 
     public function getConnection() {
         $this->conn = null;
