@@ -24,7 +24,8 @@ class Database {
                                 $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch(PDOException $exception) {
-            echo "Bağlantı hatası: " . $exception->getMessage();
+            error_log("Database connection failed: " . $exception->getMessage());
+            echo "Bir hata oluştu. Lütfen daha sonra tekrar deneyiniz.";
         }
         
         return $this->conn;
