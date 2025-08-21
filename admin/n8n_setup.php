@@ -88,6 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'telegram_chat_id' => $_POST['telegram_chat_id'] ?? ''
         ];
         
+        // Create webhook_configs table if not exists
+        $db->execute("
+            CREATE TABLE IF NOT EXISTS webhook_configs (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                event_type VARCHAR(100) NOT NULL,
+                webhook_url VARCHAR(500) NOT NULL,
+                is_active BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
+        
         // Save configuration to database
         foreach ($config as $key => $value) {
             if (!empty($value)) {
@@ -101,6 +112,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         'setting_value' => $value
                     ]);
                 }
+            }
+        }
+        
+        // Setup webhook configurations for N8N
+        if (!empty($config['webhook_base_url'])) {
+            $webhook_base = rtrim($config['webhook_base_url'], '/');
+            
+            // Clear existing webhook configs
+            $db->execute("DELETE FROM webhook_configs WHERE event_type IN ('new_request', 'approval_update')");
+            
+            // Add N8N webhook configurations
+            $webhooks = [
+                ['event_type' => 'new_request', 'webhook_url' => 'https://otomasyon.kutahyam.tr/webhook/approval-webhook'],
+                ['event_type' => 'approval_update', 'webhook_url' => 'https://otomasyon.kutahyam.tr/webhook/approval-webhook']
+            ];
+            
+            foreach ($webhooks as $webhook) {
+                $db->insert('webhook_configs', $webhook);
             }
         }
         

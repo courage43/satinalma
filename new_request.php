@@ -88,6 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Log the request creation
         auditRequest('create', $request_id, $request_number, null, $requestData);
         
+        // Trigger webhook for new request
+        $webhook_url = "https://satinalma.kutahyam.tr/api/webhooks/new_request.php";
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $webhook_url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['request_id' => $request_id]));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_exec($ch);
+        curl_close($ch);
+        
         flashSuccess('Satın alma talebi başarıyla oluşturuldu. Talep numarası: ' . $request_number . '. Onay sürecine alındı.');
         
         // Redirect to prevent resubmission
